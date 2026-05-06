@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History - AI Islamic Mentor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Nunito:wght@300;400;500;600;700&family=Noto+Nastaliq+Urdu&display=swap" rel="stylesheet">
+    <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: #030f0e;
+            min-height: 100vh;
+            color: #e0f5f0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #061f18, #0d4a3a, #061f18);
+            text-align: center;
+            padding: 18px 20px;
+            border-bottom: 2px solid #c4a020;
+            position: relative;
+            flex-shrink: 0;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+        }
+        .header h1 { font-family: 'Cinzel', serif; font-size: 26px; color: #f5c842; letter-spacing: 3px; text-shadow: 0 0 30px rgba(245,200,66,0.4); }
+        .header p { font-size: 11px; color: #80c4b0; margin-top: 5px; letter-spacing: 2px; font-weight: 300; text-transform: uppercase; }
+        .header-buttons { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); display: flex; gap: 8px; }
+        .btn-header { background: rgba(13,74,58,0.6); color: #f5deb3; padding: 7px 18px; border-radius: 20px; text-decoration: none; font-size: 12px; font-weight: 600; border: 1px solid #c4a020; transition: all 0.3s; }
+        .btn-header:hover { background: #c4a020; color: #051a18; }
+
+        .page-body { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 30px 16px 50px; }
+
+        .stats-bar { width: 100%; max-width: 780px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding: 10px 16px; background: rgba(13,74,58,0.15); border: 1px solid rgba(196,160,32,0.2); border-radius: 12px; }
+        .stats-label { font-size: 12px; color: #4a9080; }
+        .stats-label span { color: #f5c842; font-weight: 700; font-size: 14px; }
+        .clear-all-btn { background: transparent; border: 1px solid rgba(198,40,40,0.4); color: #ff8a80; font-size: 11px; font-weight: 700; padding: 6px 16px; border-radius: 20px; cursor: pointer; font-family: 'Nunito', sans-serif; transition: all 0.25s; }
+        .clear-all-btn:hover { background: rgba(198,40,40,0.15); border-color: #ff8a80; }
+
+        .history-list { width: 100%; max-width: 780px; display: flex; flex-direction: column; gap: 12px; }
+
+        /* ── CARD — overflow visible so dropdown never clips ── */
+        .history-card {
+            background: linear-gradient(145deg, #071f1a, #0a2e25);
+            border: 1px solid #0d4a3a;
+            border-radius: 16px;
+            overflow: visible;          /* KEY: never clip dropdown */
+            transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+            animation: cardIn 0.4s ease both;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .history-card:hover { border-color: rgba(196,160,32,0.6); box-shadow: 0 6px 30px rgba(0,0,0,0.5); transform: translateY(-2px); }
+
+        /* Inner div clips only the card content, NOT the dropdown */
+        .card-inner { border-radius: 16px; overflow: hidden; }
+
+        .card-main {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px 18px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .card-icon { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, rgba(13,74,58,0.8), rgba(196,160,32,0.15)); border: 1px solid rgba(196,160,32,0.4); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+
+        .card-content { flex: 1; min-width: 0; }
+        .card-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .card-badge { background: linear-gradient(135deg, #b8920e, #f5c842); color: #030f0e; font-size: 9px; font-weight: 800; padding: 3px 10px; border-radius: 20px; letter-spacing: 1px; text-transform: uppercase; flex-shrink: 0; }
+        .card-time { font-size: 10px; color: #3a7060; }
+        .card-question { color: #f0e6b0; font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        /* No preview text — removed */
+
+        /* ── THREE DOTS BUTTON ── */
+        .card-actions {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .menu-btn {
+            background: rgba(13,74,58,0.5);
+            border: 1px solid rgba(13,74,58,0.9);
+            color: #6ab090;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            flex-direction: row;
+        }
+        .menu-btn:hover { color: #f5c842; background: rgba(245,200,66,0.1); border-color: rgba(245,200,66,0.35); }
+
+        /* Three dots as SVG circles — clean and uniform */
+        .dot { width: 4px; height: 4px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+        /* ── DROPDOWN ── */
+        .action-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: linear-gradient(145deg, #0c3528, #071f1a);
+            border: 1px solid rgba(196,160,32,0.45);
+            border-radius: 13px;
+            box-shadow: 0 16px 50px rgba(0,0,0,0.75);
+            z-index: 99999;
+            min-width: 178px;
+            overflow: hidden;
+            animation: menuIn 0.18s ease;
+        }
+        .action-menu.open { display: block; }
+
+        @keyframes menuIn { from { opacity:0; transform:translateY(-6px) scale(0.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 12px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: #c8ede5;
+            transition: background 0.15s, color 0.15s;
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+            font-family: 'Nunito', sans-serif;
+            letter-spacing: 0.2px;
+        }
+        .menu-item:hover { background: rgba(196,160,32,0.1); color: #f5c842; }
+        .menu-item.danger { color: #ff8a80; }
+        .menu-item.danger:hover { background: rgba(198,40,40,0.13); color: #ff6060; }
+        .menu-item + .menu-item { border-top: 1px solid rgba(13,74,58,0.55); }
+
+        /* ── EXPANDED PANEL ── */
+        .card-expanded { max-height: 0; overflow: hidden; transition: max-height 0.45s ease; }
+        .card-expanded.open { max-height: 9999px; }
+
+        .expanded-inner { padding: 18px 20px 22px; border-top: 1px solid rgba(13,74,58,0.6); }
+
+        .expanded-label { display: flex; align-items: center; gap: 8px; font-size: 10px; font-weight: 800; color: #c4a020; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid rgba(196,160,32,0.15); }
+        .expanded-label::before { content: ''; display: inline-block; width: 3px; height: 14px; background: linear-gradient(to bottom, #f5c842, #c4a020); border-radius: 2px; }
+
+        /* ── ANSWER BODY ── */
+        .answer-body { color: #c8ede5; font-size: 13.5px; line-height: 1.9; word-break: break-word; }
+
+        .answer-body .english-line { direction: ltr; text-align: left; margin: 5px 0; }
+
+        .answer-body .section-title { font-weight: 700; font-size: 13px; margin: 16px 0 8px; padding: 6px 12px; background: rgba(196,160,32,0.08); color: #f5c842; }
+        .answer-body .section-title.ltr { direction: ltr; text-align: left; border-left: 3px solid #c4a020; border-right: none; border-radius: 0 6px 6px 0; }
+        .answer-body .section-title.rtl { direction: rtl; text-align: right; font-family: 'Noto Nastaliq Urdu', serif; font-size: 14px; line-height: 2; border-right: 3px solid #c4a020; border-left: none; border-radius: 6px 0 0 6px; }
+
+        .answer-body .section-divider { border: none; border-top: 1px solid rgba(13,74,58,0.8); margin: 14px 0; }
+
+        .answer-body .bullet-point { display: flex; margin: 6px 0; gap: 10px; }
+        .answer-body .bullet-point.ltr { direction: ltr; flex-direction: row; text-align: left; padding-left: 8px; }
+        .answer-body .bullet-point.rtl { direction: rtl; flex-direction: row; text-align: right; padding-right: 8px; font-family: 'Noto Nastaliq Urdu', serif; font-size: 14px; line-height: 2.2; }
+        .answer-body .bullet-dot { color: #c4a020; flex-shrink: 0; margin-top: 4px; }
+
+        /* ── REFERENCE LINE — FULLY FIXED ── */
+        .answer-body .reference-line {
+            background: rgba(13,74,58,0.3);
+            border: 1px solid rgba(13,74,58,0.6);
+            border-radius: 8px;
+            padding: 8px 14px;
+            margin: 8px 0;
+            font-size: 13px;
+            color: #a0d4c8;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        /* LTR reference — label left, link left */
+        .answer-body .reference-line.ltr {
+            direction: ltr;
+            flex-direction: row;
+            justify-content: flex-start;
+        }
+        /* RTL reference — label RIGHT, link also on RIGHT side */
+        .answer-body .reference-line.rtl {
+            direction: rtl;
+            flex-direction: row-reverse;
+            justify-content: flex-start;
+            font-family: 'Noto Nastaliq Urdu', serif;
+            font-size: 14px;
+            line-height: 2;
+            text-align: right;
+        }
+        /* URL always readable LTR but inherits RTL position */
+        .answer-body .ref-url {
+            direction: ltr;
+            unicode-bidi: isolate;
+            display: inline-block;
+            color: #f5c842;
+            text-decoration: none;
+            font-family: 'Nunito', sans-serif;
+            font-size: 13px;
+            border-bottom: 1px solid rgba(245,200,66,0.3);
+        }
+        .answer-body .ref-url:hover { border-color: #f5c842; }
+        .answer-body .ref-label { white-space: nowrap; }
+
+        .answer-body .arabic-text { font-family: 'Noto Nastaliq Urdu', serif; direction: rtl; text-align: right; font-size: 16px; line-height: 2.6; color: #f0e6b0; margin: 10px 0; }
+        .answer-body a { color: #f5c842; text-decoration: none; border-bottom: 1px solid rgba(245,200,66,0.3); }
+        .answer-body a:hover { border-color: #f5c842; }
+
+        /* ── NO HISTORY ── */
+        .no-history { text-align: center; color: #4a9080; padding: 70px 20px; font-size: 15px; line-height: 2; }
+        .no-history .no-icon { font-size: 50px; margin-bottom: 16px; }
+        .no-history a { color: #f5c842; text-decoration: none; font-weight: 700; }
+
+        .loading-state { text-align: center; color: #4a9080; padding: 70px 20px; font-size: 14px; font-style: italic; animation: pulse 1.5s infinite; }
+
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+        @keyframes cardIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+        .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(90px); background: linear-gradient(135deg, #0d4a3a, #082820); border: 1px solid #c4a020; color: #f5c842; padding: 12px 26px; border-radius: 30px; font-size: 13px; font-weight: 700; box-shadow: 0 8px 30px rgba(0,0,0,0.6); transition: transform 0.35s ease; z-index: 99999; pointer-events: none; }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #030f0e; }
+        ::-webkit-scrollbar-thumb { background: #0d4a3a; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #c4a020; }
+
+        @media (max-width: 600px) {
+            .header-buttons { display: none; }
+            .header h1 { font-size: 20px; }
+            .stats-bar { flex-direction: column; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🕌 AI Islamic Mentor</h1>
+        <p>Your Chats History</p>
+        <div class="header-buttons">
+            <a href="/" class="btn-header">← Back to Chat</a>
+        </div>
+    </div>
+
+    <div class="page-body">
+        <div class="stats-bar" id="statsBar" style="display:none">
+            <div class="stats-label">Showing <span id="historyCount">0</span> queries</div>
+            <button class="clear-all-btn" onclick="clearAll()">🗑 Clear All</button>
+        </div>
+        <div class="history-list" id="historyList">
+            <div class="loading-state">⏳ Loading your history...</div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        window.addEventListener("load", function () {
+
+            const firebaseConfig = {
+                apiKey: "AIzaSyDddr2-_xX13KYUeAU2F6s4_pBzlSEmEb0",
+                authDomain: "ai-islamic-mentor-baeed.firebaseapp.com",
+                projectId: "ai-islamic-mentor-baeed",
+                storageBucket: "ai-islamic-mentor-baeed.firebasestorage.app",
+                messagingSenderId: "851411732968",
+                appId: "1:851411732968:web:b5626eddc137b6f602bc5d"
+            };
+
+            firebase.initializeApp(firebaseConfig);
+
+            let currentEmail = "";
+            let historyData  = [];
+
+            // Close menus on outside click
+            document.addEventListener("click", function(e) {
+                if (!e.target.closest(".card-actions")) {
+                    document.querySelectorAll(".action-menu.open").forEach(m => m.classList.remove("open"));
+                }
+            });
+
+            // ── DETECT MOSTLY ARABIC ──
+            function isMostlyArabic(text) {
+                const arabicChars = (text.match(/[\u0600-\u06FF]/g) || []).length;
+                const totalChars  = text.replace(/\s/g, "").length;
+                return totalChars > 0 && (arabicChars / totalChars) > 0.4;
+            }
+
+            // ── FORMAT ANSWER ──
+            function formatAnswer(text) {
+                if (!text) return "";
+                const lines = text.split("\n");
+                let html = "";
+
+                for (let i = 0; i < lines.length; i++) {
+                    let line = lines[i].trim();
+
+                    if (/^[━\-=─]{3,}$/.test(line)) { html += `<hr class="section-divider">`; continue; }
+                    if (line === "") continue;
+
+                    const isArabicLine = isMostlyArabic(line);
+
+                    // 🔹 subheading
+                    if (/^🔹/.test(line)) {
+                        const content = line.replace(/^🔹\s*/, "");
+                        const dir = isMostlyArabic(content) ? "rtl" : "ltr";
+                        html += `<div class="section-title ${dir}">🔹 ${escapeHtml(content)}</div>`;
+                        continue;
+                    }
+
+                    // Emoji + title — check if content after emoji is Urdu or English
+                    if (/^[🎓📖📜✅🕌🔗]/.test(line)) {
+                        const afterEmoji = line.replace(/^[🎓📖📜✅🕌🔗]\s*/, "");
+                        const dir = isMostlyArabic(afterEmoji) ? "rtl" : "ltr";
+                        html += `<div class="section-title ${dir}">${escapeHtml(line)}</div>`;
+                        continue;
+                    }
+
+                    // ALL CAPS English title
+                    if (/^[A-Z][A-Z\s:]{5,}$/.test(line) && !isArabicLine) {
+                        html += `<div class="section-title ltr">${escapeHtml(line)}</div>`;
+                        continue;
+                    }
+
+                    // Bullets
+                    if (/^[-•]\s/.test(line)) {
+                        const content = line.replace(/^[-•]\s/, "");
+                        const dir = isMostlyArabic(content) ? "rtl" : "ltr";
+                        html += `<div class="bullet-point ${dir}"><span class="bullet-dot">◆</span><span>${escapeHtml(content)}</span></div>`;
+                        continue;
+                    }
+
+                    // URL only line
+                    if (/^https?:\/\//.test(line)) {
+                        html += `<div class="reference-line ltr"><a class="ref-url" href="${line}" target="_blank">${line}</a></div>`;
+                        continue;
+                    }
+
+                    // ── REFERENCE WITH URL — KEY FIX ──
+                    const urlMatch = line.match(/https?:\/\/\S+/);
+                    if (urlMatch && (isArabicLine || /^[📖📜🔗]/.test(line) || /حوالہ|حوالہ جات|حوالے/.test(line))) {
+                        const url      = urlMatch[0];
+                        const label    = line.replace(url, "").trim();
+                        const dir      = isArabicLine ? "rtl" : "ltr";
+                        if (dir === "rtl") {
+                            // RTL: label on right, URL follows to left naturally
+                            html += `<div class="reference-line rtl">
+                                        <span class="ref-label">${escapeHtml(label)}</span>
+                                        <a class="ref-url" href="${url}" target="_blank">${url}</a>
+                                     </div>`;
+                        } else {
+                            html += `<div class="reference-line ltr">
+                                        <span class="ref-label">${escapeHtml(label)}</span>
+                                        <a class="ref-url" href="${url}" target="_blank">${url}</a>
+                                     </div>`;
+                        }
+                        continue;
+                    }
+
+                    // Reference line no URL
+                    if (/^[📖📜🔗]/.test(line)) {
+                        const dir = isArabicLine ? "rtl" : "ltr";
+                        html += `<div class="reference-line ${dir}"><span>${escapeHtml(line)}</span></div>`;
+                        continue;
+                    }
+
+                    // Arabic paragraph
+                    if (isArabicLine) {
+                        html += `<div class="arabic-text">${escapeHtml(line)}</div>`;
+                        continue;
+                    }
+
+                    // Normal English
+                    html += `<p class="english-line">${escapeHtml(line)}</p>`;
+                }
+
+                return `<div class="answer-body">${html}</div>`;
+            }
+
+            function getBadgeIcon(type) {
+                const t = (type || "").toLowerCase();
+                if (t.includes("tafsir"))  return "📖";
+                if (t.includes("hadith"))  return "📜";
+                if (t.includes("urdu"))    return "🌍";
+                if (t.includes("arabic"))  return "🕋";
+                if (t.includes("fiqh"))    return "⚖️";
+                if (t.includes("study"))   return "📝";
+                if (t.includes("general")) return "🎓";
+                return "❓";
+            }
+
+            function showToast(msg) {
+                const t = document.getElementById("toast");
+                t.textContent = msg;
+                t.classList.add("show");
+                setTimeout(() => t.classList.remove("show"), 2500);
+            }
+
+            function escapeHtml(str) {
+                return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+            }
+
+            // ── TOGGLE MENU ──
+            window.toggleMenu = function(btn) {
+                const menu   = btn.nextElementSibling;
+                const isOpen = menu.classList.contains("open");
+                document.querySelectorAll(".action-menu.open").forEach(m => m.classList.remove("open"));
+                if (!isOpen) menu.classList.add("open");
+            };
+
+            // ── COPY ──
+            window.copyAnswer = function(index) {
+                document.querySelectorAll(".action-menu.open").forEach(m => m.classList.remove("open"));
+                const item = historyData[index];
+                navigator.clipboard.writeText(`Question: ${item.question}\n\nAnswer:\n${item.answer}`)
+                    .then(() => showToast("📋 Copied to clipboard!"))
+                    .catch(() => showToast("❌ Copy failed"));
+            };
+
+            // ── SHARE ──
+            window.shareAnswer = function(index) {
+                document.querySelectorAll(".action-menu.open").forEach(m => m.classList.remove("open"));
+                const item = historyData[index];
+                const text = `🕌 AI Islamic Mentor\n\n❓ ${item.question}\n\n${item.answer}`;
+                if (navigator.share) {
+                    navigator.share({ title: "AI Islamic Mentor", text }).catch(() => {});
+                } else {
+                    navigator.clipboard.writeText(text).then(() => showToast("🔗 Copied — paste to share!"));
+                }
+            };
+
+            // ── SAVE AS PDF — directly opens print window, NO extra dialog ──
+            window.savePDF = function(index) {
+                document.querySelectorAll(".action-menu.open").forEach(m => m.classList.remove("open"));
+                const item     = historyData[index];
+                const answHtml = formatAnswer(item.answer || "");
+
+                const printContent = `<!DOCTYPE html>
+<html lang="ur" dir="auto">
+<head>
+    <meta charset="UTF-8">
+    <title>${escapeHtml(item.question || "AI Islamic Mentor")}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        @page { margin: 18mm 20mm; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Nunito',sans-serif; background:#fff; color:#1a1a1a; font-size:13px; line-height:1.9; }
+
+        .pdf-header { background:linear-gradient(135deg,#082820,#0d4a3a); color:#f5c842; padding:20px 28px; text-align:center; border-radius:10px; margin-bottom:4px; }
+        .pdf-header h1 { font-size:20px; letter-spacing:3px; }
+        .gold-line { height:3px; background:linear-gradient(to right,#b8920e,#f5c842,#b8920e); margin-bottom:18px; border-radius:2px; }
+
+        .pdf-meta { font-size:11px; color:#555; margin-bottom:14px; padding:8px 12px; background:#f8f8f8; border-radius:8px; border-left:3px solid #c4a020; }
+        .pdf-question { font-size:14px; font-weight:700; color:#082820; margin-bottom:18px; padding:12px 16px; background:#f0f9f6; border-left:4px solid #c4a020; border-radius:0 10px 10px 0; }
+        .pdf-answer-label { font-size:10px; font-weight:800; color:#c4a020; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:14px; padding-bottom:8px; border-bottom:2px solid #f0e8c8; display:flex; align-items:center; gap:8px; }
+        .pdf-answer-label::before { content:''; display:inline-block; width:3px; height:13px; background:linear-gradient(to bottom,#f5c842,#c4a020); border-radius:2px; }
+
+        .answer-body { color:#1a1a1a; font-size:13px; line-height:1.9; word-break:break-word; }
+        .english-line { direction:ltr; text-align:left; margin:4px 0; }
+        .section-title { font-weight:700; font-size:12px; margin:14px 0 6px; padding:5px 10px; background:#f5f0e0; color:#6a4c00; }
+        .section-title.ltr { direction:ltr; text-align:left; border-left:3px solid #c4a020; border-radius:0 5px 5px 0; }
+        .section-title.rtl { direction:rtl; text-align:right; font-family:'Noto Nastaliq Urdu',serif; font-size:14px; line-height:2; border-right:3px solid #c4a020; border-left:none; border-radius:5px 0 0 5px; }
+        .section-divider { border:none; border-top:1px solid #ddd; margin:12px 0; }
+        .bullet-point { display:flex; gap:8px; margin:5px 0; }
+        .bullet-point.ltr { direction:ltr; text-align:left; padding-left:8px; flex-direction:row; align-items:flex-start; }
+        .bullet-point.rtl { direction:rtl; text-align:right; padding-right:8px; flex-direction:row; align-items:flex-start; font-family:'Noto Nastaliq Urdu',serif; font-size:14px; line-height:2.2; }
+        .bullet-dot { color:#c4a020; flex-shrink:0; margin-top:4px; }
+        .arabic-text { font-family:'Noto Nastaliq Urdu',serif; direction:rtl; text-align:right; font-size:15px; line-height:2.5; color:#1a1a1a; margin:8px 0; }
+        .reference-line { background:#f0f9f6; border:1px solid #c0ddd6; border-radius:6px; padding:7px 12px; margin:7px 0; font-size:12px; color:#2a5040; display:flex; align-items:center; gap:8px; }
+        .reference-line.ltr { direction:ltr; flex-direction:row; justify-content:flex-start; }
+        .reference-line.rtl { direction:rtl; flex-direction:row; justify-content:flex-end; font-family:'Noto Nastaliq Urdu',serif; font-size:14px; line-height:2; text-align:right; }
+        .ref-url { direction:ltr; unicode-bidi:isolate; display:inline-block; color:#0d4a3a; text-decoration:none; font-family:'Nunito',sans-serif; font-size:12px; }
+        .ref-label { white-space:nowrap; }
+        .pdf-footer { margin-top:24px; padding-top:10px; border-top:1px solid #ddd; font-size:10px; color:#999; text-align:center; }
+
+        @media print {
+            body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+        }
+    </style>
+</head>
+<body>
+    <div class="pdf-header">
+        <h1>🕌 AI Islamic Mentor</h1>
+    </div>
+    <div class="gold-line"></div>
+
+    <div class="pdf-meta">
+        📋 <strong>Type:</strong> ${(item.type||"ISLAMIC").toUpperCase()}
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        🕐 <strong>Time:</strong> ${item.time||""}
+    </div>
+
+    <div class="pdf-question">❓ ${escapeHtml(item.question||"")}</div>
+
+    <div class="pdf-answer-label">Full AI Response</div>
+
+    ${answHtml}
+
+    <div class="pdf-footer">
+        Generated by AI Islamic Mentor &nbsp;|&nbsp; ${new Date().toLocaleDateString()} &nbsp;|&nbsp; ${new Date().toLocaleTimeString()}
+    </div>
+
+    <script>
+        document.fonts.ready.then(function() {
+            setTimeout(function() { window.print(); }, 600);
+        });
+    <\/script>
+</body>
+</html>`;
+
+                const pw = window.open("", "_blank", "width=860,height=920,scrollbars=yes");
+                pw.document.write(printContent);
+                pw.document.close();
+                showToast("📄 Opening print dialog...");
+            };
+
+            // ── DELETE ──
+            window.deleteItem = function(index) {
+                document.querySelectorAll(".action-menu.open").forEach(m => m.classList.remove("open"));
+                const cards = document.querySelectorAll(".history-card");
+                const card  = cards[index];
+                if (!card) return;
+                card.style.transition = "opacity 0.3s, transform 0.3s";
+                card.style.opacity    = "0";
+                card.style.transform  = "translateX(40px)";
+                setTimeout(async () => {
+                    card.remove();
+                    historyData.splice(index, 1);
+                    await saveHistoryToServer();
+                    updateCount();
+                    showToast("✅ Chat History deleted");
+                }, 320);
+            };
+
+            window.clearAll = function() {
+                if (!confirm("Delete all history? This action cannot be undone.")) return;
+                historyData = [];
+                saveHistoryToServer();
+                renderHistory([]);
+                showToast("🗑 History cleared");
+            };
+
+            async function saveHistoryToServer() {
+                if (!currentEmail) return;
+                try {
+                    await fetch("/save-history", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ email: currentEmail, history: historyData })
+                    });
+                } catch(e) { console.log("Save error:", e); }
+            }
+
+            // Clicking card row toggles expand
+            window.toggleExpand = function(mainDiv) {
+                const expanded = mainDiv.closest(".history-card").querySelector(".card-expanded");
+                expanded.classList.toggle("open");
+            };
+
+            function updateCount() {
+                const count = document.querySelectorAll(".history-card").length;
+                document.getElementById("historyCount").textContent = count;
+                if (count === 0) renderHistory([]);
+            }
+
+            function buildCard(item, index) {
+                const card = document.createElement("div");
+                card.className = "history-card";
+                card.style.animationDelay = (index * 0.06) + "s";
+
+                const type     = item.type    || "ISLAMIC";
+                const icon     = getBadgeIcon(type);
+                const question = item.question || "";
+                const answer   = item.answer   || "";
+                const time     = item.time     || "";
+
+                card.innerHTML = `
+                <div class="card-inner">
+                    <div class="card-main" onclick="toggleExpand(this)">
+                        <div class="card-icon">${icon}</div>
+                        <div class="card-content">
+                            <div class="card-meta">
+                                <span class="card-badge">${type.replace(/_/g," ")}</span>
+                                <span class="card-time">🕐 ${time}</span>
+                            </div>
+                            <div class="card-question">${escapeHtml(question)}</div>
+                        </div>
+                        <div class="card-actions" onclick="event.stopPropagation()">
+                            <button class="menu-btn" title="More Options" onclick="toggleMenu(this)">
+                                <span class="dot"></span>
+                                <span class="dot"></span>
+                                <span class="dot"></span>
+                            </button>
+                            <div class="action-menu">
+                                <button class="menu-item" onclick="copyAnswer(${index})">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                    Copy Answer
+                                </button>
+                                <button class="menu-item" onclick="shareAnswer(${index})">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                                    Share
+                                </button>
+                                <button class="menu-item" onclick="savePDF(${index})">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                                    Save As 
+                                </button>
+                                <button class="menu-item danger" onclick="deleteItem(${index})">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-expanded">
+                        <div class="expanded-inner">
+                            <div class="expanded-label">Full AI Response</div>
+                            ${formatAnswer(answer)}
+                        </div>
+                    </div>
+                </div>`;
+                return card;
+            }
+
+            function renderHistory(items) {
+                const list     = document.getElementById("historyList");
+                const statsBar = document.getElementById("statsBar");
+                list.innerHTML = "";
+                if (!items || items.length === 0) {
+                    statsBar.style.display = "none";
+                    const empty = document.createElement("div");
+                    empty.className = "no-history";
+                    empty.innerHTML = `<div class="no-icon">🕌</div><p>No query history yet.</p><a href="/">Ask your first question!</a>`;
+                    list.appendChild(empty);
+                    return;
+                }
+                statsBar.style.display = "flex";
+                document.getElementById("historyCount").textContent = items.length;
+                items.forEach((item, i) => list.appendChild(buildCard(item, i)));
+            }
+
+            async function loadHistory(email) {
+                try {
+                    const response = await fetch("/get-history", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ email })
+                    });
+                    const data = await response.json();
+                    historyData = data.history ? [...data.history].reverse() : [];
+                    renderHistory(historyData);
+                } catch(e) {
+                    document.getElementById("historyList").innerHTML =
+                        `<div class="no-history">⚠️ Error loading history. Please try again.</div>`;
+                }
+            }
+
+            firebase.auth().onAuthStateChanged(function(user) {
+                if (user) {
+                    currentEmail = user.email;
+                    loadHistory(user.email);
+                } else {
+                    document.getElementById("historyList").innerHTML =
+                        `<div class="no-history">Please <a href='/login'>login</a> to view your history.</div>`;
+                }
+            });
+
+        });
+    </script>
+
+</body>
+</html>
