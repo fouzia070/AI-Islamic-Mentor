@@ -183,5 +183,5 @@ if __name__ == "__main__":
     log = logging.getLogger('werkzeug')
     log.setLevel(logging.ERROR)
     print("🕌 AI Islamic Mentor is starting...")
-    print("🌐 Click this link: http://127.0.0.1:5000")
-    app.run(debug=False, host="127.0.0.1", port=5000, use_reloader=False)
+    print("🌐 Running on Hugging Face Space")
+    app.run(debug=False, host="0.0.0.0", port=7860, use_reloader=False)
