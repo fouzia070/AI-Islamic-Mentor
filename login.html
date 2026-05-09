@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - AI Islamic Mentor</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <!-- Header -->
+    <div class="header">
+        <h1>🕌 AI Islamic Mentor</h1>
+        <p>Login to your account</p>
+    </div>
+
+    <!-- Login Form -->
+    <div class="auth-container">
+        <div class="auth-box">
+            <h2>Welcome Back</h2>
+            <p class="auth-subtitle">Login to save your query history</p>
+
+            <!-- Error Message -->
+            <div class="error-msg" id="errorMsg"></div>
+
+            <!-- Email Input -->
+            <div class="input-group">
+                <label>Email Address</label>
+                <input
+                    type="email"
+                    id="emailInput"
+                    placeholder="Enter your email"
+                    onkeydown="if(event.key==='Enter') loginUser()"
+                >
+            </div>
+
+            <!-- Password Input -->
+            <div class="input-group">
+                <label>Password</label>
+                <input
+                    type="password"
+                    id="passwordInput"
+                    placeholder="Enter your password"
+                    onkeydown="if(event.key==='Enter') loginUser()"
+                >
+            </div>
+
+            <!-- Login Button -->
+            <button onclick="loginUser()" id="loginBtn" class="btn-auth">
+                Login
+            </button>
+
+            <!-- Register Link -->
+            <p class="auth-link">
+                Don't have an account? 
+                <a href="/register">Register here</a>
+            </p>
+
+            <!-- Back to Chat -->
+            <p class="auth-link">
+                <a href="/">← Back to Chat</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Firebase Compat SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDddr2-_xX13KYUeAU2F6s4_pBzlSEmEb0",
+            authDomain: "ai-islamic-mentor-baeed.firebaseapp.com",
+            projectId: "ai-islamic-mentor-baeed",
+            storageBucket: "ai-islamic-mentor-baeed.firebasestorage.app",
+            messagingSenderId: "851411732968",
+            appId: "1:851411732968:web:b5626eddc137b6f602bc5d"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+
+        async function loginUser() {
+            const email    = document.getElementById("emailInput").value;
+            const password = document.getElementById("passwordInput").value;
+            const errorMsg = document.getElementById("errorMsg");
+            const loginBtn = document.getElementById("loginBtn");
+
+            errorMsg.style.display = "none";
+            errorMsg.textContent = "";
+
+            if (!email || !password) {
+                errorMsg.textContent = "Please enter email and password.";
+                errorMsg.style.display = "block";
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = "Logging in...";
+
+            try {
+                await firebase.auth().signInWithEmailAndPassword(email, password);
+                window.location.href = "/";
+            } catch (error) {
+                errorMsg.textContent = "Login failed: " + error.message;
+                errorMsg.style.display = "block";
+                loginBtn.disabled = false;
+                loginBtn.textContent = "Login";
+            }
+        }
+    </script>
+
+</body>
+</html>
